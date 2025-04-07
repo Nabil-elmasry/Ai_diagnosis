@@ -1,38 +1,59 @@
 
 import streamlit as st
-import pandas as pd
 import pdfplumber
-import io
+import pandas as pd
+import re
 
-st.set_page_config(page_title="AI Diagnosis", layout="wide")
+def extract_sensor_data(text):
+    pattern = r"(?P<Name>[\w\s\-/()#]+?)\s+(?P<Value>[\d\-.]+)\s+(?P<Range>[\d\- .]+)\s+(?P<Unit>[\w/%°]+)"
+    matches = re.findall(pattern, text)
+    data = []
+    for match in matches:
+        data.append({
+            "Name": match[0].strip(),
+            "Value": float(match[1]),
+            "Range": match[2].strip(),
+            "Unit": match[3].strip()
+        })
+    return pd.DataFrame(data)
 
-st.title("AI Car Diagnostic Tool")
+def main():
+    st.title("AI Car Diagnosis")
 
-st.markdown("Upload **Fault Report** and **Sensor Report** as PDF files")
+    sensor_file = st.file_uploader("ارفع تقرير الحساسات (sensor)", type="pdf")
+    code_file = st.file_uploader("ارفع تقرير الأعطال (code)", type="pdf")
 
-col1, col2 = st.columns(2)
+    if sensor_file is not None:
+        with pdfplumber.open(sensor_file) as pdf:
+            text = ''
+            for page in pdf.pages:
+                text += page.extract_text()
+            df = extract_sensor_data(text)
 
-with col1:
-    fault_pdf = st.file_uploader("Upload Fault Report PDF", type="pdf", key="fault")
-with col2:
-    sensor_pdf = st.file_uploader("Upload Sensor Report PDF", type="pdf", key="sensor")
+            # تلوين القيم الخارجة عن الرينج
+            def highlight_range(row):
+                try:
+                    min_val, max_val = map(float, row['Range'].split('-'))
+                    if row['Value'] < min_val or row['Value'] > max_val:
+                        return ['background-color: red']*len(row)
+                    else:
+                        return ['background-color: #c6f6d5']*len(row)
+                except:
+                    return ['']*len(row)
 
-def extract_text_from_pdf(pdf_file):
-    text = ""
-    with pdfplumber.open(pdf_file) as pdf:
-        for page in pdf.pages:
-            text += page.extract_text() + "\n"
-    return text
+            st.subheader("بيانات الحساسات")
+            st.dataframe(df.style.apply(highlight_range, axis=1))
 
-if fault_pdf and sensor_pdf:
-    fault_text = extract_text_from_pdf(fault_pdf)
-    sensor_text = extract_text_from_pdf(sensor_pdf)
+    if code_file is not None:
+        with pdfplumber.open(code_file) as pdf:
+            text = ''
+            for page in pdf.pages:
+                text += page.extract_text()
+            st.subheader("أكواد الأعطال")
+            # استخراج الأكواد بصيغة مبسطة
+            dtcs = re.findall(r"(P\d{4})\s+(.*?)(?:Current|History|Pending)?", text)
+            code_df = pd.DataFrame(dtcs, columns=["DTC Code", "Description"])
+            st.table(code_df)
 
-    st.subheader("Fault Report Content")
-    st.text_area("Fault Report", fault_text, height=250)
-
-    st.subheader("Sensor Report Content")
-    st.text_area("Sensor Report", sensor_text, height=250)
-
-    # وهنا لاحقًا نضيف المعالجة وتحليل الأعطال تلقائيًا
-
+if __name__ == "__main__":
+    main()
