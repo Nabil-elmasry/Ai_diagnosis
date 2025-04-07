@@ -2,56 +2,32 @@
 import streamlit as st
 import pdfplumber
 import pandas as pd
-import re
 
-def extract_sensor_data(text):
-    pattern = r"(?P<Name>[\w\s\-/()#]+?)\s+(?P<Value>[\d\-.]+)\s+(?P<Range>[\d\- .]+)\s+(?P<Unit>[\w/%Â°]+)"
-    matches = re.findall(pattern, text)
-    data = []
-    for match in matches:
-        data.append({
-            "Name": match[0].strip(),
-            "Value": float(match[1]),
-            "Range": match[2].strip(),
-            "Unit": match[3].strip()
-        })
-    return pd.DataFrame(data)
+st.set_page_config(page_title="AI Diagnosis", layout="wide")
+st.title("Vehicle Fault Diagnosis (AI Assistant)")
 
-def main():
-    st.title("AI Car Diagnosis")
+def extract_text_from_pdf(uploaded_file):
+    with pdfplumber.open(uploaded_file) as pdf:
+        text = ""
+        for page in pdf.pages:
+            text += page.extract_text() + "\n"
+    return text
 
-    sensor_file = st.file_uploader("Ø§Ø±ÙØ¹ ØªÙ‚Ø±ÙŠØ± Ø§Ù„Ø­Ø³Ø§Ø³Ø§Øª (sensor)", type="pdf")
-    code_file = st.file_uploader("Ø§Ø±ÙØ¹ ØªÙ‚Ø±ÙŠØ± Ø§Ù„Ø£Ø¹Ø·Ø§Ù„ (code)", type="pdf")
+st.sidebar.header("Upload Diagnosis Files")
+sensor_pdf = st.sidebar.file_uploader("Upload Sensor Data (PDF)", type="pdf")
+code_pdf = st.sidebar.file_uploader("Upload Fault Report (PDF)", type="pdf")
 
-    if sensor_file is not None:
-        with pdfplumber.open(sensor_file) as pdf:
-            text = ''
-            for page in pdf.pages:
-                text += page.extract_text()
-            df = extract_sensor_data(text)
+if sensor_pdf and code_pdf:
+    st.subheader("1. Sensor Data Content")
+    sensor_text = extract_text_from_pdf(sensor_pdf)
+    st.text_area("Sensor Data", sensor_text, height=300)
 
-            def highlight_range(row):
-                try:
-                    min_val, max_val = map(float, row['Range'].split('-'))
-                    if row['Value'] < min_val or row['Value'] > max_val:
-                        return ['background-color: red']*len(row)
-                    else:
-                        return ['background-color: #c6f6d5']*len(row)
-                except:
-                    return ['']*len(row)
+    st.subheader("2. Fault Code Report")
+    code_text = extract_text_from_pdf(code_pdf)
+    st.text_area("Fault Report", code_text, height=300)
 
-            st.subheader("Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø­Ø³Ø§Ø³Ø§Øª")
-            st.dataframe(df.style.apply(highlight_range, axis=1))
-
-    if code_file is not None:
-        with pdfplumber.open(code_file) as pdf:
-            text = ''
-            for page in pdf.pages:
-                text += page.extract_text()
-            st.subheader("Ø£ÙƒÙˆØ§Ø¯ Ø§Ù„Ø£Ø¹Ø·Ø§Ù„")
-            dtcs = re.findall(r"(P\d{4})\s+(.*?)(?:Current|History|Pending)?", text)
-            code_df = pd.DataFrame(dtcs, columns=["DTC Code", "Description"])
-            st.table(code_df)
-
-if __name__ == "__main__":
-    main()
+    st.subheader("3. AI Initial Insight")
+    st.markdown("- Based on your sensor and fault code data, further analysis will be applied here.")
+    st.info("**Next Step:** This area will display fault reason detection + recommended solutions.")
+else:
+    st.warning("Please upload both PDF files to start the diagnosis.")
