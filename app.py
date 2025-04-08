@@ -1,4 +1,4 @@
-### ملف `app.py`
+### ملف `app.py` (الإصدار المصحح)
 ```python
 import streamlit as st
 import pdfplumber
@@ -44,7 +44,6 @@ if code_file and sensor_file:
     st.subheader("بيانات الحساسات المستخرجة")
     st.dataframe(df_sensors)
 
-    # Match sensor names with fault descriptions (simple logic)
     st.subheader("تحليل وربط الحساسات مع الأعطال")
     matched = []
     for _, row in df_dtcs.iterrows():
@@ -67,5 +66,3 @@ if code_file and sensor_file:
 else:
     st.info("يرجى تحميل تقريري PDF للبدء في المقارنة.")
 ```
-
----
