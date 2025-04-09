@@ -1,68 +1,60 @@
-### ملف `app.py` (الإصدار المصحح)
-```python
+
 import streamlit as st
 import pdfplumber
 import pandas as pd
 import re
 
-st.set_page_config(page_title="أداة تحليل أعطال المركبات", layout="wide")
-st.title("أداة تحليل الأعطال وربط الحساسات")
+def extract_sensor_data(text):
+    pattern = r"(?P<Name>[\w\s\-/()#]+?)\s+(?P<Value>[\d\-.]+)\s+(?P<Range>[\d\- .]+)\s+(?P<Unit>[\w/%°]+)"
+    matches = re.findall(pattern, text)
+    data = []
+    for match in matches:
+        data.append({
+            "Name": match[0].strip(),
+            "Value": float(match[1]),
+            "Range": match[2].strip(),
+            "Unit": match[3].strip()
+        })
+    return pd.DataFrame(data)
 
-def extract_text(pdf_file):
-    with pdfplumber.open(pdf_file) as pdf:
-        return "\n".join([page.extract_text() for page in pdf.pages if page.extract_text()])
+def main():
+    st.title("AI Car Diagnosis")
 
-def extract_dtcs(text):
-    return re.findall(r'(P\d{4})\s+(.+)', text)
+    sensor_file = st.file_uploader("ارفع تقرير الحساسات (sensor)", type="pdf")
+    code_file = st.file_uploader("ارفع تقرير الأعطال (code)", type="pdf")
 
-def extract_sensors(text):
-    lines = text.split('\n')
-    sensors = []
-    for line in lines:
-        parts = line.strip().split()
-        if len(parts) >= 2:
-            name = ' '.join(parts[:-1])
-            value = parts[-1]
-            sensors.append([name, value])
-    return pd.DataFrame(sensors, columns=['الحساس', 'القراءة'])
+    if sensor_file is not None:
+        with pdfplumber.open(sensor_file) as pdf:
+            text = ''
+            for page in pdf.pages:
+                text += page.extract_text()
+            df = extract_sensor_data(text)
 
-code_file = st.file_uploader("تحميل تقرير الأعطال (PDF)", type='pdf')
-sensor_file = st.file_uploader("تحميل تقرير الحساسات (PDF)", type='pdf')
+            # تلوين القيم الخارجة عن الرينج
+            def highlight_range(row):
+                try:
+                    min_val, max_val = map(float, row['Range'].split('-'))
+                    if row['Value'] < min_val or row['Value'] > max_val:
+                        return ['background-color: red']*len(row)
+                    else:
+                        return ['background-color: #c6f6d5']*len(row)
+                except:
+                    return ['']*len(row)
 
-if code_file and sensor_file:
-    dtc_text = extract_text(code_file)
-    sensor_text = extract_text(sensor_file)
+            st.subheader("بيانات الحساسات")
+            st.dataframe(df.style.apply(highlight_range, axis=1))
 
-    dtcs = extract_dtcs(dtc_text)
-    df_dtcs = pd.DataFrame(dtcs, columns=['كود العطل', 'الوصف'])
+    if code_file is not None:
+        with pdfplumber.open(code_file) as pdf:
+            text = ''
+            for page in pdf.pages:
+                text += page.extract_text()
+            st.subheader("أكواد الأعطال")
+            # استخراج الأكواد بصيغة مبسطة
+            dtcs = re.findall(r"(P\d{4})\s+(.*?)(?:Current|History|Pending)?", text)
+            code_df = pd.DataFrame(dtcs, columns=["DTC Code", "Description"])
+            st.table(code_df)
 
-    df_sensors = extract_sensors(sensor_text)
+if __name__ == "__main__":
+    main()
 
-    st.subheader("أكواد الأعطال المستخرجة")
-    st.dataframe(df_dtcs)
-
-    st.subheader("بيانات الحساسات المستخرجة")
-    st.dataframe(df_sensors)
-
-    st.subheader("تحليل وربط الحساسات مع الأعطال")
-    matched = []
-    for _, row in df_dtcs.iterrows():
-        for _, srow in df_sensors.iterrows():
-            if srow['الحساس'].lower() in row['الوصف'].lower():
-                matched.append([
-                    row['كود العطل'],
-                    row['الوصف'],
-                    srow['الحساس'],
-                    srow['القراءة'],
-                    "العطل مرتبط بالحساس - يرجى التحقق"
-                ])
-
-    if matched:
-        df_match = pd.DataFrame(matched, columns=["كود العطل", "الوصف", "الحساس", "قراءة الحساس", "تحليل مبدئي"])
-        st.success("تم العثور على علاقة بين بعض الأكواد والحساسات:")
-        st.dataframe(df_match)
-    else:
-        st.warning("لا توجد علاقة واضحة بين الأكواد وبيانات الحساسات.")
-else:
-    st.info("يرجى تحميل تقريري PDF للبدء في المقارنة.")
-```
