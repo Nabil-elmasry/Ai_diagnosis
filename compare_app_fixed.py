@@ -1,4 +1,4 @@
-#ggg
+
 import streamlit as st
 import pdfplumber
 import pandas as pd
@@ -21,7 +21,10 @@ def extract_sensors(text):
         parts = line.strip().split()
         if len(parts) >= 2:
             name = ' '.join(parts[:-1])
-            value = parts[-1]
+            try:
+                value = float(parts[-1])
+            except ValueError:
+                value = parts[-1]  # Leave it as text if not a number
             sensors.append([name, value])
     return pd.DataFrame(sensors, columns=['Sensor', 'Value'])
 
