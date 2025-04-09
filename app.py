@@ -25,3 +25,4 @@ if code_file:
 
 if not sensor_file and not code_file:
     st.info("Please upload both PDF reports to preview content.")
+
