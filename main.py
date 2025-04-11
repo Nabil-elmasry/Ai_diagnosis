@@ -84,7 +84,7 @@ if sensor_file and code_file:
     else:
         st.info("No direct match or deviation detected.")
 
-    # ========== الإضافة الجديدة: حفظ البيانات في CSV ==========
+    # حفظ البيانات في ملف CSV
     try:
         sensor_dict = {row['Sensor']: row['Value'] for _, row in df_sensors.iterrows()}
         sensor_dict['Fault Codes'] = ','.join(df_dtcs['Code'].tolist())
@@ -100,6 +100,17 @@ if sensor_file and code_file:
 
         final_df.to_csv(csv_filename, index=False)
         st.success("Data saved successfully to car_analysis_data.csv")
+
+        # زر تحميل الملف
+        with open(csv_filename, "rb") as f:
+            st.download_button(
+                label="Download car_analysis_data.csv",
+                data=f,
+                file_name="car_analysis_data.csv",
+                mime="text/csv"
+            )
+
     except Exception as e:
         st.error(f"Error saving data: {e}")
-
+else:
+    st.warning("Please upload both sensor and fault PDF reports to proceed.")
