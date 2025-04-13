@@ -32,18 +32,29 @@ def extract_sensor_data(text):
             sensors.append([name, value, standard, unit])
     return pd.DataFrame(sensors, columns=["Sensor", "Value", "Standard", "Unit"])
 
-# رفع الملفات
-sensor_files = st.file_uploader("Upload One or More Sensor Reports (PDF)", type="pdf", accept_multiple_files=True)
+# واجهة رفع الملفات
+st.subheader("Step 1: Upload Sensor Reports (You can upload multiple)")
+sensor_files = st.file_uploader(
+    "Upload One or More Sensor Reports (PDF)", 
+    type="pdf", 
+    accept_multiple_files=True,
+    help="Hold CTRL (Windows) or CMD (Mac) to select multiple files"
+)
+
+st.subheader("Step 2: Upload Fault Code Report")
 code_file = st.file_uploader("Upload Fault Report (PDF)", type="pdf")
 
 if sensor_files and code_file:
-    # دمج تقارير الحساسات
+    st.success(f"Uploaded {len(sensor_files)} sensor report(s)")
+    
+    # دمج كل ملفات الحساسات في نص واحد
     sensor_text = ""
     for file in sensor_files:
         sensor_text += extract_text_from_pdf(file)
 
     code_text = extract_text_from_pdf(code_file)
 
+    # استخراج وتحليل البيانات
     df_sensors = extract_sensor_data(sensor_text)
     dtcs = extract_dtcs(code_text)
     df_dtcs = pd.DataFrame(dtcs, columns=["Code", "Description"])
@@ -105,7 +116,6 @@ if sensor_files and code_file:
         final_df.to_csv(csv_filename, index=False)
         st.success("Data saved successfully to car_analysis_data.csv")
 
-        # زر تحميل الملف
         with open(csv_filename, "rb") as f:
             st.download_button(
                 label="Download car_analysis_data.csv",
@@ -117,5 +127,5 @@ if sensor_files and code_file:
     except Exception as e:
         st.error(f"Error saving data: {e}")
 else:
-    st.warning("Please upload one or more sensor PDF reports and a fault code report to proceed.")
+    st.warning("Please upload sensor report(s) and fault report to proceed.")
 
