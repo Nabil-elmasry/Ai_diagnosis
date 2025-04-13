@@ -33,11 +33,15 @@ def extract_sensor_data(text):
     return pd.DataFrame(sensors, columns=["Sensor", "Value", "Standard", "Unit"])
 
 # رفع الملفات
-sensor_file = st.file_uploader("Upload Sensor Report (PDF)", type="pdf")
+sensor_files = st.file_uploader("Upload One or More Sensor Reports (PDF)", type="pdf", accept_multiple_files=True)
 code_file = st.file_uploader("Upload Fault Report (PDF)", type="pdf")
 
-if sensor_file and code_file:
-    sensor_text = extract_text_from_pdf(sensor_file)
+if sensor_files and code_file:
+    # دمج تقارير الحساسات
+    sensor_text = ""
+    for file in sensor_files:
+        sensor_text += extract_text_from_pdf(file)
+
     code_text = extract_text_from_pdf(code_file)
 
     df_sensors = extract_sensor_data(sensor_text)
@@ -84,7 +88,7 @@ if sensor_file and code_file:
     else:
         st.info("No direct match or deviation detected.")
 
-    # حفظ البيانات في ملف CSV
+    # حفظ البيانات في CSV
     try:
         sensor_dict = {row['Sensor']: row['Value'] for _, row in df_sensors.iterrows()}
         sensor_dict['Fault Codes'] = ','.join(df_dtcs['Code'].tolist())
@@ -113,4 +117,5 @@ if sensor_file and code_file:
     except Exception as e:
         st.error(f"Error saving data: {e}")
 else:
-    st.warning("Please upload both sensor and fault PDF reports to proceed.")
+    st.warning("Please upload one or more sensor PDF reports and a fault code report to proceed.")
+
