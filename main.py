@@ -6,8 +6,9 @@ import re
 import os
 
 st.set_page_config(page_title="AI Car Diagnosis", layout="wide")
-st.title("AI Car Diagnosis - Final Sensor-Fault Analyzer")
+st.title("AI Car Diagnosis - Mobile-Friendly Sensor Upload")
 
+# دالة قراءة نص PDF
 def extract_text_from_pdf(uploaded_file):
     with pdfplumber.open(uploaded_file) as pdf:
         text = ""
@@ -16,9 +17,11 @@ def extract_text_from_pdf(uploaded_file):
                 text += page.extract_text() + "\n"
     return text
 
+# استخراج الأكواد
 def extract_dtcs(text):
     return re.findall(r"(P\d{4})\s+(.+)", text)
 
+# استخراج بيانات الحساسات
 def extract_sensor_data(text):
     lines = text.split('\n')
     sensors = []
@@ -32,29 +35,32 @@ def extract_sensor_data(text):
             sensors.append([name, value, standard, unit])
     return pd.DataFrame(sensors, columns=["Sensor", "Value", "Standard", "Unit"])
 
-# واجهة رفع الملفات
-st.subheader("Step 1: Upload Sensor Reports (You can upload multiple)")
-sensor_files = st.file_uploader(
-    "Upload One or More Sensor Reports (PDF)", 
-    type="pdf", 
-    accept_multiple_files=True,
-    help="Hold CTRL (Windows) or CMD (Mac) to select multiple files"
-)
+# تخزين مؤقت للملفات
+if "sensor_reports" not in st.session_state:
+    st.session_state.sensor_reports = []
+
+st.subheader("Step 1: Add Sensor Report (واحد فقط في كل مرة)")
+
+sensor_file = st.file_uploader("Upload one sensor report (PDF)", type="pdf")
+
+if sensor_file and st.button("Add to Sensor List"):
+    st.session_state.sensor_reports.append(sensor_file)
+    st.success(f"Added report: {sensor_file.name}")
+
+st.write(f"Total uploaded sensor reports: {len(st.session_state.sensor_reports)}")
 
 st.subheader("Step 2: Upload Fault Code Report")
-code_file = st.file_uploader("Upload Fault Report (PDF)", type="pdf")
 
-if sensor_files and code_file:
-    st.success(f"Uploaded {len(sensor_files)} sensor report(s)")
-    
-    # دمج كل ملفات الحساسات في نص واحد
+code_file = st.file_uploader("Upload fault report (PDF)", type="pdf")
+
+if st.button("Analyze All Reports") and st.session_state.sensor_reports and code_file:
+    # دمج كل النصوص من الحساسات
     sensor_text = ""
-    for file in sensor_files:
+    for file in st.session_state.sensor_reports:
         sensor_text += extract_text_from_pdf(file)
 
     code_text = extract_text_from_pdf(code_file)
 
-    # استخراج وتحليل البيانات
     df_sensors = extract_sensor_data(sensor_text)
     dtcs = extract_dtcs(code_text)
     df_dtcs = pd.DataFrame(dtcs, columns=["Code", "Description"])
@@ -124,8 +130,14 @@ if sensor_files and code_file:
                 mime="text/csv"
             )
 
+        # إعادة تعيين قائمة الحساسات
+        st.session_state.sensor_reports = []
+
     except Exception as e:
         st.error(f"Error saving data: {e}")
-else:
-    st.warning("Please upload sensor report(s) and fault report to proceed.")
+
+elif st.button("Analyze All Reports") and not st.session_state.sensor_reports:
+    st.warning("Please upload at least one sensor report.")
+elif st.button("Analyze All Reports") and not code_file:
+    st.warning("Please upload the fault code report.")
 
