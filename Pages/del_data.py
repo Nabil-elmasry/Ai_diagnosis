@@ -26,3 +26,12 @@ if st.button("تفريغ البيانات (الاحتفاظ بالعناوين �
         st.success("تم مسح البيانات بنجاح مع الاحتفاظ بأسماء الأعمدة.")
     except Exception as e:
         st.error(f"حدث خطأ أثناء إعادة الضبط: {e}")
+
+
+st.sidebar.subheader("Developer Tools")
+
+if st.sidebar.button("Clear All Memory (Session Reset)"):
+    st.session_state.clear()
+    st.success("Session memory cleared. Please refresh the page.")
+
+
