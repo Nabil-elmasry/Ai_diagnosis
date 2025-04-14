@@ -1,16 +1,14 @@
-# now we will start true work
-
 
 import streamlit as st
 import pdfplumber
 import pandas as pd
 import re
-import os
-import matplotlib.pyplot as plt
+import plotly.express as px
 
-st.set_page_config(page_title="Fault Prediction", layout="wide")
-st.title("AI Car Diagnosis - Predictive Fault Analysis")
+st.set_page_config(page_title="Smart Prediction", layout="wide")
+st.title("AI Predictive Maintenance - Sensor Deviation Dashboard")
 
+# --- دوال المساعدة ---
 def extract_text_from_pdf(uploaded_file):
     with pdfplumber.open(uploaded_file) as pdf:
         text = ""
@@ -33,38 +31,54 @@ def extract_sensor_data(text):
                 deviation = abs(float(value) - float(standard)) / float(standard) * 100 if float(standard) != 0 else 0
             except:
                 deviation = None
-            sensors.append([name, value, standard, unit, deviation])
+            sensors.append([name, float(value), float(standard), unit, deviation])
     return pd.DataFrame(sensors, columns=["Sensor", "Value", "Standard", "Unit", "Deviation %"])
 
-st.subheader("Upload Sensor Report to Analyze")
-
-sensor_file = st.file_uploader("Upload sensor report (PDF)", type="pdf")
+# --- واجهة المستخدم ---
+sensor_file = st.file_uploader("Upload Sensor Report (PDF)", type="pdf")
 
 if sensor_file:
-    sensor_text = extract_text_from_pdf(sensor_file)
-    df_sensors = extract_sensor_data(sensor_text)
-    df_sensors.dropna(subset=["Deviation %"], inplace=True)
+    text = extract_text_from_pdf(sensor_file)
+    df = extract_sensor_data(text)
+    df.dropna(subset=["Deviation %"], inplace=True)
 
-    st.subheader("Extracted Sensor Data with Deviation")
-    st.dataframe(df_sensors)
+    st.subheader("Extracted Sensor Data")
+    st.dataframe(df)
 
-    # رسم بياني للانحرافات
-    st.subheader("Deviation Chart")
-    fig, ax = plt.subplots(figsize=(10, 4))
-    bars = ax.bar(df_sensors["Sensor"], df_sensors["Deviation %"].astype(float), color="orange")
-    ax.set_ylabel("Deviation (%)")
-    ax.set_xlabel("Sensor")
-    ax.set_title("Sensor Deviation Overview")
-    ax.axhline(15, color='red', linestyle='--', label='Critical Deviation Threshold')
-    ax.legend()
-    plt.xticks(rotation=45, ha="right")
-    st.pyplot(fig)
+    # --- رسم بياني متطور ---
+    st.subheader("Sensor Deviation Visualization")
 
-    # عرض الحساسات الخطرة
-    high_dev = df_sensors[df_sensors["Deviation %"].astype(float) > 15]
-    if not high_dev.empty:
-        st.error("Warning: Some sensors show high deviation that may indicate future faults.")
-        st.dataframe(high_dev)
+    df["Status"] = df["Deviation %"].apply(
+        lambda d: "OK" if d <= 10 else "Warning" if d <= 15 else "Critical"
+    )
+
+    color_map = {
+        "OK": "green",
+        "Warning": "orange",
+        "Critical": "red"
+    }
+
+    fig = px.bar(
+        df,
+        x="Sensor",
+        y="Deviation %", 
+        color="Status",
+        color_discrete_map=color_map,
+        text="Deviation %",
+        title="Deviation Levels per Sensor",
+        animation_frame="Status",
+        range_y=[0, max(df["Deviation %"].max(), 20) + 5]
+    )
+
+    fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
+    fig.update_layout(xaxis_tickangle=-45, height=500)
+    st.plotly_chart(fig, use_container_width=True)
+
+    # --- تنبيه للحساسات الحرجة ---
+    critical = df[df["Status"] == "Critical"]
+    if not critical.empty:
+        st.error("Sensors with Critical Deviation Found:")
+        st.dataframe(critical)
     else:
-        st.success("All sensor readings are within acceptable deviation limits.")
+        st.success("No critical deviations detected.")
 
