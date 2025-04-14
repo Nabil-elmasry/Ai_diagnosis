@@ -20,7 +20,7 @@ if st.sidebar.button("احذف الملف وامسح الذاكرة"):
     except Exception as e:
         st.sidebar.error(f"حدث خطأ أثناء الحذف: {e}")
 
-# ======= الدوال =======
+# ======= دوال استخراج البيانات =======
 def extract_text_from_pdf(uploaded_file):
     with pdfplumber.open(uploaded_file) as pdf:
         text = ""
@@ -97,32 +97,35 @@ if sensor_file and code_file:
     else:
         st.info("No direct match or deviation detected.")
 
-    # ======= حفظ البيانات في CSV =======
-    try:
-        sensor_dict = {row['Sensor']: row['Value'] for _, row in df_sensors.iterrows()}
-        sensor_dict['Fault Codes'] = ','.join(df_dtcs['Code'].tolist())
+    # ======= زر يدوي لحفظ البيانات =======
+    st.subheader("Save Data")
+    if st.button("احفظ البيانات الحالية"):
+        try:
+            sensor_dict = {row['Sensor']: row['Value'] for _, row in df_sensors.iterrows()}
+            sensor_dict['Fault Codes'] = ','.join(df_dtcs['Code'].tolist())
 
-        new_case_df = pd.DataFrame([sensor_dict])
+            new_case_df = pd.DataFrame([sensor_dict])
 
-        csv_filename = "car_analysis_data.csv"
-        if os.path.exists(csv_filename):
-            existing_df = pd.read_csv(csv_filename)
-            final_df = pd.concat([existing_df, new_case_df], ignore_index=True)
-        else:
-            final_df = new_case_df
+            csv_filename = "car_analysis_data.csv"
+            if os.path.exists(csv_filename):
+                existing_df = pd.read_csv(csv_filename)
+                final_df = pd.concat([existing_df, new_case_df], ignore_index=True)
+            else:
+                final_df = new_case_df
 
-        final_df.to_csv(csv_filename, index=False)
-        st.success("Data saved successfully to car_analysis_data.csv")
+            final_df.to_csv(csv_filename, index=False)
+            st.success("Data saved successfully to car_analysis_data.csv")
 
-        with open(csv_filename, "rb") as f:
-            st.download_button(
-                label="Download car_analysis_data.csv",
-                data=f,
-                file_name="car_analysis_data.csv",
-                mime="text/csv"
-            )
+            with open(csv_filename, "rb") as f:
+                st.download_button(
+                    label="Download car_analysis_data.csv",
+                    data=f,
+                    file_name="car_analysis_data.csv",
+                    mime="text/csv"
+                )
 
-    except Exception as e:
-        st.error(f"Error saving data: {e}")
+        except Exception as e:
+            st.error(f"Error saving data: {e}")
 else:
     st.warning("Please upload both sensor and fault PDF reports to proceed.")
+
