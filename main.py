@@ -1,3 +1,4 @@
+#ااملف بعد تعديل عدم تكرار البيانات
 
 import streamlit as st
 import pdfplumber
@@ -8,13 +9,13 @@ import os
 st.set_page_config(page_title="AI Car Diagnosis", layout="wide")
 st.title("AI Car Diagnosis - Final Sensor-Fault Analyzer")
 
-# ======= زر مسح الملف والذاكرة المؤقتة =======
+# ======= زر مسح الملف والذاكرة =======
 st.sidebar.subheader("تنظيف كامل للبيانات")
 
 if st.sidebar.button("احذف الملف وامسح الذاكرة"):
     try:
-        if os.path.exists("car_analysis_data.csv"):
-            os.remove("car_analysis_data.csv")
+        if os.path.exists("Creation_dataset_car.csv"):
+            os.remove("Creation_dataset_car.csv")
         st.session_state.clear()
         st.sidebar.success("تم حذف الملف ومسح الذاكرة. أعد تشغيل الصفحة.")
     except Exception as e:
@@ -98,7 +99,8 @@ if sensor_file and code_file:
         st.info("No direct match or deviation detected.")
 
     # ======= زر يدوي لحفظ البيانات =======
-    st.subheader("Save Data")
+    st.subheader("4. حفظ البيانات يدويًا")
+
     if st.button("احفظ البيانات الحالية"):
         try:
             sensor_dict = {row['Sensor']: row['Value'] for _, row in df_sensors.iterrows()}
@@ -106,7 +108,7 @@ if sensor_file and code_file:
 
             new_case_df = pd.DataFrame([sensor_dict])
 
-            csv_filename = "car_analysis_data.csv"
+            csv_filename = "Creation_dataset_car.csv"
             if os.path.exists(csv_filename):
                 existing_df = pd.read_csv(csv_filename)
                 final_df = pd.concat([existing_df, new_case_df], ignore_index=True)
@@ -114,18 +116,19 @@ if sensor_file and code_file:
                 final_df = new_case_df
 
             final_df.to_csv(csv_filename, index=False)
-            st.success("Data saved successfully to car_analysis_data.csv")
+            st.success("تم حفظ البيانات في الملف Creation_dataset_car.csv")
 
             with open(csv_filename, "rb") as f:
                 st.download_button(
-                    label="Download car_analysis_data.csv",
+                    label="Download Creation_dataset_car.csv",
                     data=f,
-                    file_name="car_analysis_data.csv",
+                    file_name="Creation_dataset_car.csv",
                     mime="text/csv"
                 )
 
         except Exception as e:
             st.error(f"Error saving data: {e}")
+
 else:
     st.warning("Please upload both sensor and fault PDF reports to proceed.")
 
