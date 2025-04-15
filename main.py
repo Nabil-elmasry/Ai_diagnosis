@@ -8,7 +8,7 @@ import os
 st.set_page_config(page_title="AI Car Diagnosis", layout="wide")
 st.title("AI Car Diagnosis - Final Sensor-Fault Analyzer")
 
-# ======= زر مسح الملف والذاكرة المؤقتة =======
+# ======= زر مسح الملف والذاكرة =======
 st.sidebar.subheader("تنظيف كامل للبيانات")
 
 if st.sidebar.button("احذف الملف وامسح الذاكرة"):
@@ -50,7 +50,7 @@ sensor_files = st.file_uploader("Upload One or More Sensor Reports (PDF)", type=
 code_file = st.file_uploader("Upload Fault Report (PDF)", type="pdf")
 
 if sensor_files and code_file:
-    # دمج جميع تقارير الحساسات
+    # دمج تقارير الحساسات كلها
     sensor_text = ""
     for file in sensor_files:
         sensor_text += extract_text_from_pdf(file)
@@ -130,4 +130,6 @@ if sensor_files and code_file:
 
         except Exception as e:
             st.error(f"Error saving data: {e}")
+else:
+    st.warning("Please upload one or more sensor PDF reports and a fault code report to proceed.")
 
