@@ -1,6 +1,4 @@
-#ااملف بعد تعديل عدم تكرار البيانات
 
-#ارجاع زرار حفظ عديد من التقارير البيانات 
 
 import streamlit as st
 import pdfplumber
