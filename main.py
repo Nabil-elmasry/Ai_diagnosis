@@ -30,7 +30,17 @@ def extract_text_from_pdf(uploaded_file):
     return text
 
 def extract_dtcs(text):
-    return re.findall(r"(P\d{4})\s+(.+)", text)
+    lines = text.split('\n')
+    dtcs = []
+
+    for line in lines:
+        match = re.match(r"(P\d{4})\s+(.+)", line)
+        if match:
+            dtcs.append([match.group(1), match.group(2)])
+        elif line.strip():  # لو في وصف عطل بدون كود
+            dtcs.append(["No Code", line.strip()])
+
+    return dtcs
 
 def extract_sensor_data(text):
     lines = text.split('\n')
@@ -50,7 +60,7 @@ sensor_files = st.file_uploader("Upload One or More Sensor Reports (PDF)", type=
 code_file = st.file_uploader("Upload Fault Report (PDF)", type="pdf")
 
 if sensor_files and code_file:
-    # دمج تقارير الحساسات كلها
+    # دمج كل ملفات الحساسات
     sensor_text = ""
     for file in sensor_files:
         sensor_text += extract_text_from_pdf(file)
@@ -130,6 +140,6 @@ if sensor_files and code_file:
 
         except Exception as e:
             st.error(f"Error saving data: {e}")
+
 else:
     st.warning("Please upload one or more sensor PDF reports and a fault code report to proceed.")
-
