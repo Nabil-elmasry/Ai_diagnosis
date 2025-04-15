@@ -1,5 +1,7 @@
 #ااملف بعد تعديل عدم تكرار البيانات
 
+#ارجاع زرار حفظ عديد من التقارير البيانات 
+
 import streamlit as st
 import pdfplumber
 import pandas as pd
@@ -9,7 +11,7 @@ import os
 st.set_page_config(page_title="AI Car Diagnosis", layout="wide")
 st.title("AI Car Diagnosis - Final Sensor-Fault Analyzer")
 
-# ======= زر مسح الملف والذاكرة =======
+# ======= زر مسح الملف والذاكرة المؤقتة =======
 st.sidebar.subheader("تنظيف كامل للبيانات")
 
 if st.sidebar.button("احذف الملف وامسح الذاكرة"):
@@ -47,11 +49,15 @@ def extract_sensor_data(text):
     return pd.DataFrame(sensors, columns=["Sensor", "Value", "Standard", "Unit"])
 
 # ======= واجهة رفع الملفات =======
-sensor_file = st.file_uploader("Upload Sensor Report (PDF)", type="pdf")
+sensor_files = st.file_uploader("Upload One or More Sensor Reports (PDF)", type="pdf", accept_multiple_files=True)
 code_file = st.file_uploader("Upload Fault Report (PDF)", type="pdf")
 
-if sensor_file and code_file:
-    sensor_text = extract_text_from_pdf(sensor_file)
+if sensor_files and code_file:
+    # دمج جميع تقارير الحساسات
+    sensor_text = ""
+    for file in sensor_files:
+        sensor_text += extract_text_from_pdf(file)
+
     code_text = extract_text_from_pdf(code_file)
 
     df_sensors = extract_sensor_data(sensor_text)
@@ -130,5 +136,5 @@ if sensor_file and code_file:
             st.error(f"Error saving data: {e}")
 
 else:
-    st.warning("Please upload both sensor and fault PDF reports to proceed.")
+    st.warning("Please upload one or more sensor PDF reports and a fault code report to proceed.")
 
