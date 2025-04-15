@@ -42,11 +42,11 @@ if sensor_file:
     df = extract_sensor_data(text)
     df.dropna(subset=["Deviation %"], inplace=True)
 
-    st.subheader("Extracted Sensor Data")
+    st.subheader("1. Extracted Sensor Data")
     st.dataframe(df)
 
     # --- رسم بياني متطور ---
-    st.subheader("Sensor Deviation Visualization")
+    st.subheader("2. Sensor Deviation Visualization")
 
     df["Status"] = df["Deviation %"].apply(
         lambda d: "OK" if d <= 10 else "Warning" if d <= 15 else "Critical"
@@ -61,7 +61,7 @@ if sensor_file:
     fig = px.bar(
         df,
         x="Sensor",
-        y="Deviation %", 
+        y="Deviation %",
         color="Status",
         color_discrete_map=color_map,
         text="Deviation %",
@@ -75,6 +75,7 @@ if sensor_file:
     st.plotly_chart(fig, use_container_width=True)
 
     # --- تنبيه للحساسات الحرجة ---
+    st.subheader("3. Critical Sensors Summary")
     critical = df[df["Status"] == "Critical"]
     if not critical.empty:
         st.error("Sensors with Critical Deviation Found:")
@@ -82,3 +83,8 @@ if sensor_file:
     else:
         st.success("No critical deviations detected.")
 
+    # --- حفظ اختياري للبيانات لاحقًا ---
+    st.info("سيتم قريبًا ربط هذا التحليل بالنموذج الذكي للتنبؤ بالعطل بناءً على قراءات الحساسات.")
+
+else:
+    st.warning("يرجى رفع ملف PDF يحتوي على قراءات الحساسات لبدء التحليل.")
