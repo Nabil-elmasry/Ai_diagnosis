@@ -1,5 +1,4 @@
 
-
 import streamlit as st
 import pdfplumber
 import pandas as pd
@@ -104,7 +103,6 @@ if sensor_files and code_file:
 
     # ======= زر يدوي لحفظ البيانات =======
     st.subheader("4. حفظ البيانات يدويًا")
-
     if st.button("احفظ البيانات الحالية"):
         try:
             sensor_dict = {row['Sensor']: row['Value'] for _, row in df_sensors.iterrows()}
@@ -132,7 +130,4 @@ if sensor_files and code_file:
 
         except Exception as e:
             st.error(f"Error saving data: {e}")
-
-else:
-    st.warning("Please upload one or more sensor PDF reports and a fault code report to proceed.")
 
