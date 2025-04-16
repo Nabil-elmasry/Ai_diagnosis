@@ -34,10 +34,12 @@ def extract_dtcs(text):
     dtcs = []
 
     for line in lines:
-        match = re.match(r"(P\d{4})\s+(.+)", line)
+        match = re.search(r"(P\d{4})", line)  # نبحث عن الكود في أي مكان
         if match:
-            dtcs.append([match.group(1), match.group(2)])
-        elif line.strip():  # لو في وصف عطل بدون كود
+            code = match.group(1)
+            desc = line.replace(code, "").strip(" :-–")  # نحذف الكود من الوصف
+            dtcs.append([code, desc.strip()])
+        elif line.strip():  # وصف فقط بدون كود
             dtcs.append(["No Code", line.strip()])
 
     return dtcs
@@ -143,3 +145,4 @@ if sensor_files and code_file:
 
 else:
     st.warning("Please upload one or more sensor PDF reports and a fault code report to proceed.")
+
