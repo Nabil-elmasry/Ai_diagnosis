@@ -4,7 +4,7 @@ import pdfplumber
 import pandas as pd
 import re
 import os
-import datetime
+import shutil
 
 st.set_page_config(page_title="AI Car Diagnosis", layout="wide")
 st.title("AI Car Diagnosis - Final Sensor-Fault Analyzer")
@@ -14,10 +14,12 @@ st.sidebar.subheader("تنظيف كامل للبيانات")
 
 if st.sidebar.button("احذف الملف وامسح الذاكرة"):
     try:
-        if os.path.exists("creat_car_data.csv"):
-            os.remove("creat_car_data.csv")
+        if os.path.exists("Carset.csv"):
+            os.remove("Carset.csv")
+        if os.path.exists("Backup.csv"):
+            os.remove("Backup.csv")
         st.session_state.clear()
-        st.sidebar.success("تم حذف الملف ومسح الذاكرة. أعد تشغيل الصفحة.")
+        st.sidebar.success("تم حذف الملفات ومسح الذاكرة. أعد تشغيل الصفحة.")
     except Exception as e:
         st.sidebar.error(f"حدث خطأ أثناء الحذف: {e}")
 
@@ -61,7 +63,6 @@ sensor_files = st.file_uploader("Upload One or More Sensor Reports (PDF)", type=
 code_file = st.file_uploader("Upload Fault Report (PDF)", type="pdf")
 
 if sensor_files and code_file:
-    # دمج ملفات الحساسات
     sensor_text = ""
     for file in sensor_files:
         sensor_text += extract_text_from_pdf(file)
@@ -112,22 +113,22 @@ if sensor_files and code_file:
     else:
         st.info("No direct match or deviation detected.")
 
-    # ======= زر يدوي لحفظ البيانات مع نسخة احتياطية =======
+    # ======= زر يدوي لحفظ البيانات =======
     st.subheader("4. حفظ البيانات يدويًا")
     if st.button("احفظ البيانات الحالية"):
         try:
             sensor_dict = {row['Sensor']: row['Value'] for _, row in df_sensors.iterrows()}
             sensor_dict['Fault Codes'] = ','.join(df_dtcs['Code'].tolist())
             new_case_df = pd.DataFrame([sensor_dict])
-            csv_filename = "creat_car_data.csv"
 
-            # حفظ نسخة احتياطية تلقائيًا قبل التعديل
+            csv_filename = "Carset.csv"
+            backup_filename = "Backup.csv"
+
+            # إنشاء نسخة احتياطية من الملف السابق
             if os.path.exists(csv_filename):
-                now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-                backup_name = f"backup_creat_car_data_{now}.csv"
-                os.rename(csv_filename, backup_name)
+                shutil.copyfile(csv_filename, backup_filename)
 
-            # كتابة البيانات الجديدة
+            # دمج البيانات الجديدة
             if os.path.exists(csv_filename):
                 existing_df = pd.read_csv(csv_filename)
                 final_df = pd.concat([existing_df, new_case_df], ignore_index=True)
@@ -135,13 +136,13 @@ if sensor_files and code_file:
                 final_df = new_case_df
 
             final_df.to_csv(csv_filename, index=False)
-            st.success("تم حفظ البيانات وتخزين نسخة احتياطية تلقائيًا.")
+            st.success("تم حفظ البيانات في Carset.csv وتم إنشاء نسخة احتياطية في Backup.csv")
 
             with open(csv_filename, "rb") as f:
                 st.download_button(
-                    label="Download creat_car_data.csv",
+                    label="Download Carset.csv",
                     data=f,
-                    file_name="creat_car_data.csv",
+                    file_name="Carset.csv",
                     mime="text/csv"
                 )
 
