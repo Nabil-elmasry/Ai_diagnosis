@@ -1,4 +1,4 @@
-#اخر تعديل بعد مسح البيانات  اختفت
+
 import streamlit as st
 import pdfplumber
 import pandas as pd
@@ -14,8 +14,8 @@ st.sidebar.subheader("تنظيف كامل للبيانات")
 
 if st.sidebar.button("احذف الملف وامسح الذاكرة"):
     try:
-        if os.path.exists("Creation_dataset_car.csv"):
-            os.remove("Creation_dataset_car.csv")
+        if os.path.exists("creat_car_data.csv"):
+            os.remove("creat_car_data.csv")
         st.session_state.clear()
         st.sidebar.success("تم حذف الملف ومسح الذاكرة. أعد تشغيل الصفحة.")
     except Exception as e:
@@ -33,7 +33,6 @@ def extract_text_from_pdf(uploaded_file):
 def extract_dtcs(text):
     lines = text.split('\n')
     dtcs = []
-
     for line in lines:
         match = re.search(r"(P\d{4})", line)
         if match:
@@ -42,7 +41,6 @@ def extract_dtcs(text):
             dtcs.append([code, desc.strip()])
         elif line.strip():
             dtcs.append(["No Code", line.strip()])
-
     return dtcs
 
 def extract_sensor_data(text):
@@ -121,12 +119,12 @@ if sensor_files and code_file:
             sensor_dict = {row['Sensor']: row['Value'] for _, row in df_sensors.iterrows()}
             sensor_dict['Fault Codes'] = ','.join(df_dtcs['Code'].tolist())
             new_case_df = pd.DataFrame([sensor_dict])
-            csv_filename = "Creation_dataset_car.csv"
+            csv_filename = "creat_car_data.csv"
 
             # حفظ نسخة احتياطية تلقائيًا قبل التعديل
             if os.path.exists(csv_filename):
                 now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-                backup_name = f"backup_creation_dataset_car_{now}.csv"
+                backup_name = f"backup_creat_car_data_{now}.csv"
                 os.rename(csv_filename, backup_name)
 
             # كتابة البيانات الجديدة
@@ -141,9 +139,9 @@ if sensor_files and code_file:
 
             with open(csv_filename, "rb") as f:
                 st.download_button(
-                    label="Download Creation_dataset_car.csv",
+                    label="Download creat_car_data.csv",
                     data=f,
-                    file_name="Creation_dataset_car.csv",
+                    file_name="creat_car_data.csv",
                     mime="text/csv"
                 )
 
