@@ -1,9 +1,10 @@
-
+#اخر تعديل بعد مسح البيانات  اختفت
 import streamlit as st
 import pdfplumber
 import pandas as pd
 import re
 import os
+import datetime
 
 st.set_page_config(page_title="AI Car Diagnosis", layout="wide")
 st.title("AI Car Diagnosis - Final Sensor-Fault Analyzer")
@@ -34,12 +35,12 @@ def extract_dtcs(text):
     dtcs = []
 
     for line in lines:
-        match = re.search(r"(P\d{4})", line)  # نبحث عن الكود في أي مكان
+        match = re.search(r"(P\d{4})", line)
         if match:
             code = match.group(1)
-            desc = line.replace(code, "").strip(" :-–")  # نحذف الكود من الوصف
+            desc = line.replace(code, "").strip(" :-–")
             dtcs.append([code, desc.strip()])
-        elif line.strip():  # وصف فقط بدون كود
+        elif line.strip():
             dtcs.append(["No Code", line.strip()])
 
     return dtcs
@@ -62,7 +63,7 @@ sensor_files = st.file_uploader("Upload One or More Sensor Reports (PDF)", type=
 code_file = st.file_uploader("Upload Fault Report (PDF)", type="pdf")
 
 if sensor_files and code_file:
-    # دمج كل ملفات الحساسات
+    # دمج ملفات الحساسات
     sensor_text = ""
     for file in sensor_files:
         sensor_text += extract_text_from_pdf(file)
@@ -113,16 +114,22 @@ if sensor_files and code_file:
     else:
         st.info("No direct match or deviation detected.")
 
-    # ======= زر يدوي لحفظ البيانات =======
+    # ======= زر يدوي لحفظ البيانات مع نسخة احتياطية =======
     st.subheader("4. حفظ البيانات يدويًا")
     if st.button("احفظ البيانات الحالية"):
         try:
             sensor_dict = {row['Sensor']: row['Value'] for _, row in df_sensors.iterrows()}
             sensor_dict['Fault Codes'] = ','.join(df_dtcs['Code'].tolist())
-
             new_case_df = pd.DataFrame([sensor_dict])
-
             csv_filename = "Creation_dataset_car.csv"
+
+            # حفظ نسخة احتياطية تلقائيًا قبل التعديل
+            if os.path.exists(csv_filename):
+                now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                backup_name = f"backup_creation_dataset_car_{now}.csv"
+                os.rename(csv_filename, backup_name)
+
+            # كتابة البيانات الجديدة
             if os.path.exists(csv_filename):
                 existing_df = pd.read_csv(csv_filename)
                 final_df = pd.concat([existing_df, new_case_df], ignore_index=True)
@@ -130,7 +137,7 @@ if sensor_files and code_file:
                 final_df = new_case_df
 
             final_df.to_csv(csv_filename, index=False)
-            st.success("تم حفظ البيانات في الملف Creation_dataset_car.csv")
+            st.success("تم حفظ البيانات وتخزين نسخة احتياطية تلقائيًا.")
 
             with open(csv_filename, "rb") as f:
                 st.download_button(
@@ -145,4 +152,3 @@ if sensor_files and code_file:
 
 else:
     st.warning("Please upload one or more sensor PDF reports and a fault code report to proceed.")
-
