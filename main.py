@@ -1,10 +1,11 @@
-
+#نسخة عمل backup .csv
 import streamlit as st
 import pdfplumber
 import pandas as pd
 import re
 import os
 import shutil
+import datetime
 
 st.set_page_config(page_title="AI Car Diagnosis", layout="wide")
 st.title("AI Car Diagnosis - Final Sensor-Fault Analyzer")
@@ -16,8 +17,8 @@ if st.sidebar.button("احذف الملف وامسح الذاكرة"):
     try:
         if os.path.exists("Carset.csv"):
             os.remove("Carset.csv")
-        if os.path.exists("Backup.csv"):
-            os.remove("Backup.csv")
+        if os.path.exists("backup"):
+            shutil.rmtree("backup")  # حذف مجلد النسخ الاحتياطية بالكامل
         st.session_state.clear()
         st.sidebar.success("تم حذف الملفات ومسح الذاكرة. أعد تشغيل الصفحة.")
     except Exception as e:
@@ -113,7 +114,7 @@ if sensor_files and code_file:
     else:
         st.info("No direct match or deviation detected.")
 
-    # ======= زر يدوي لحفظ البيانات =======
+    # ======= زر يدوي لحفظ البيانات مع نسخة احتياطية =======
     st.subheader("4. حفظ البيانات يدويًا")
     if st.button("احفظ البيانات الحالية"):
         try:
@@ -122,11 +123,14 @@ if sensor_files and code_file:
             new_case_df = pd.DataFrame([sensor_dict])
 
             csv_filename = "Carset.csv"
-            backup_filename = "Backup.csv"
+            backup_dir = "backup"
+            os.makedirs(backup_dir, exist_ok=True)
 
-            # إنشاء نسخة احتياطية من الملف السابق
+            # إنشاء نسخة احتياطية باسم فيه التاريخ والساعة
             if os.path.exists(csv_filename):
-                shutil.copyfile(csv_filename, backup_filename)
+                now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                backup_path = os.path.join(backup_dir, f"backup_{now}.csv")
+                shutil.copyfile(csv_filename, backup_path)
 
             # دمج البيانات الجديدة
             if os.path.exists(csv_filename):
@@ -136,7 +140,7 @@ if sensor_files and code_file:
                 final_df = new_case_df
 
             final_df.to_csv(csv_filename, index=False)
-            st.success("تم حفظ البيانات في Carset.csv وتم إنشاء نسخة احتياطية في Backup.csv")
+            st.success("تم حفظ البيانات في Carset.csv وتم إنشاء نسخة احتياطية داخل مجلد backup")
 
             with open(csv_filename, "rb") as f:
                 st.download_button(
@@ -151,3 +155,4 @@ if sensor_files and code_file:
 
 else:
     st.warning("Please upload one or more sensor PDF reports and a fault code report to proceed.")
+
