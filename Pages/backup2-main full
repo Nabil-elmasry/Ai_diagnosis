@@ -1,9 +1,12 @@
-
+#نسخة عمل backup .csv
+#نسخة شغالة قبل تحويل مسار الملف #
 import streamlit as st
 import pdfplumber
 import pandas as pd
 import re
 import os
+import shutil
+import datetime
 
 st.set_page_config(page_title="AI Car Diagnosis", layout="wide")
 st.title("AI Car Diagnosis - Final Sensor-Fault Analyzer")
@@ -13,10 +16,12 @@ st.sidebar.subheader("تنظيف كامل للبيانات")
 
 if st.sidebar.button("احذف الملف وامسح الذاكرة"):
     try:
-        if os.path.exists("Creation_dataset_car.csv"):
-            os.remove("Creation_dataset_car.csv")
+        if os.path.exists("Carset.csv"):
+            os.remove("Carset.csv")
+        if os.path.exists("backup"):
+            shutil.rmtree("backup")  # حذف مجلد النسخ الاحتياطية بالكامل
         st.session_state.clear()
-        st.sidebar.success("تم حذف الملف ومسح الذاكرة. أعد تشغيل الصفحة.")
+        st.sidebar.success("تم حذف الملفات ومسح الذاكرة. أعد تشغيل الصفحة.")
     except Exception as e:
         st.sidebar.error(f"حدث خطأ أثناء الحذف: {e}")
 
@@ -32,14 +37,14 @@ def extract_text_from_pdf(uploaded_file):
 def extract_dtcs(text):
     lines = text.split('\n')
     dtcs = []
-
     for line in lines:
-        match = re.match(r"(P\d{4})\s+(.+)", line)
+        match = re.search(r"(P\d{4})", line)
         if match:
-            dtcs.append([match.group(1), match.group(2)])
-        elif line.strip():  # لو في وصف عطل بدون كود
+            code = match.group(1)
+            desc = line.replace(code, "").strip(" :-–")
+            dtcs.append([code, desc.strip()])
+        elif line.strip():
             dtcs.append(["No Code", line.strip()])
-
     return dtcs
 
 def extract_sensor_data(text):
@@ -60,7 +65,6 @@ sensor_files = st.file_uploader("Upload One or More Sensor Reports (PDF)", type=
 code_file = st.file_uploader("Upload Fault Report (PDF)", type="pdf")
 
 if sensor_files and code_file:
-    # دمج كل ملفات الحساسات
     sensor_text = ""
     for file in sensor_files:
         sensor_text += extract_text_from_pdf(file)
@@ -111,16 +115,25 @@ if sensor_files and code_file:
     else:
         st.info("No direct match or deviation detected.")
 
-    # ======= زر يدوي لحفظ البيانات =======
+    # ======= زر يدوي لحفظ البيانات مع نسخة احتياطية =======
     st.subheader("4. حفظ البيانات يدويًا")
     if st.button("احفظ البيانات الحالية"):
         try:
             sensor_dict = {row['Sensor']: row['Value'] for _, row in df_sensors.iterrows()}
             sensor_dict['Fault Codes'] = ','.join(df_dtcs['Code'].tolist())
-
             new_case_df = pd.DataFrame([sensor_dict])
 
-            csv_filename = "Creation_dataset_car.csv"
+            csv_filename = "Carset.csv"
+            backup_dir = "backup"
+            os.makedirs(backup_dir, exist_ok=True)
+
+            # إنشاء نسخة احتياطية باسم فيه التاريخ والساعة
+            if os.path.exists(csv_filename):
+                now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                backup_path = os.path.join(backup_dir, f"backup_{now}.csv")
+                shutil.copyfile(csv_filename, backup_path)
+
+            # دمج البيانات الجديدة
             if os.path.exists(csv_filename):
                 existing_df = pd.read_csv(csv_filename)
                 final_df = pd.concat([existing_df, new_case_df], ignore_index=True)
@@ -128,13 +141,13 @@ if sensor_files and code_file:
                 final_df = new_case_df
 
             final_df.to_csv(csv_filename, index=False)
-            st.success("تم حفظ البيانات في الملف Creation_dataset_car.csv")
+            st.success("تم حفظ البيانات في Carset.csv وتم إنشاء نسخة احتياطية داخل مجلد backup")
 
             with open(csv_filename, "rb") as f:
                 st.download_button(
-                    label="Download Creation_dataset_car.csv",
+                    label="Download Carset.csv",
                     data=f,
-                    file_name="Creation_dataset_car.csv",
+                    file_name="Carset.csv",
                     mime="text/csv"
                 )
 
@@ -143,3 +156,4 @@ if sensor_files and code_file:
 
 else:
     st.warning("Please upload one or more sensor PDF reports and a fault code report to proceed.")
+
