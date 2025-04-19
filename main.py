@@ -1,158 +1,74 @@
-#نسخة عمل backup .csv
+
 import streamlit as st
-import pdfplumber
-import pandas as pd
-import re
-import os
-import shutil
-import datetime
 
-st.set_page_config(page_title="AI Car Diagnosis", layout="wide")
-st.title("AI Car Diagnosis - Final Sensor-Fault Analyzer")
+st.set_page_config(page_title="AI Car Diagnosis", layout="centered")
 
-# ======= زر مسح الملف والذاكرة =======
-st.sidebar.subheader("تنظيف كامل للبيانات")
+# ======= تنسيق بصري مميز ومتدرج بالأحمر والأزرق مع تأثيرات متحركة =======
+st.markdown("""
+    <style>
+    body {
+        background: linear-gradient(to right, #1f1c2c, #928DAB);
+    }
+    h1 {
+        text-align: center;
+        font-size: 3em;
+        font-family: 'Arial Black', sans-serif;
+        color: #FF4B2B;
+        animation: pulse 2s infinite;
+        text-shadow: 2px 2px 10px #000;
+    }
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.03); }
+        100% { transform: scale(1); }
+    }
+    .start-button {
+        display: block;
+        margin: 40px auto;
+        padding: 1em 2.5em;
+        font-size: 1.2em;
+        font-weight: bold;
+        background: linear-gradient(45deg, #FF416C, #FF4B2B);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 0 15px #FF4B2B;
+        cursor: pointer;
+        transition: 0.3s ease;
+    }
+    .start-button:hover {
+        transform: scale(1.08);
+        background: linear-gradient(45deg, #ff4b2b, #ff416c);
+        box-shadow: 0 0 25px #ff4b2b;
+    }
+    .footer {
+        position: fixed;
+        bottom: 15px;
+        width: 100%;
+        text-align: center;
+        font-size: 1.1em;
+        color: #f8f8f8;
+        font-weight: bold;
+        text-shadow: 1px 1px 3px #000;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-if st.sidebar.button("احذف الملف وامسح الذاكرة"):
-    try:
-        if os.path.exists("Carset.csv"):
-            os.remove("Carset.csv")
-        if os.path.exists("backup"):
-            shutil.rmtree("backup")  # حذف مجلد النسخ الاحتياطية بالكامل
-        st.session_state.clear()
-        st.sidebar.success("تم حذف الملفات ومسح الذاكرة. أعد تشغيل الصفحة.")
-    except Exception as e:
-        st.sidebar.error(f"حدث خطأ أثناء الحذف: {e}")
+# ======= العنوان الرئيسي =======
+st.markdown("<h1>AI Car Diagnosis System</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='color:white;'>نظام التشخيص الذكي بالذكاء الاصطناعي</h1>", unsafe_allow_html=True)
 
-# ======= دوال استخراج البيانات =======
-def extract_text_from_pdf(uploaded_file):
-    with pdfplumber.open(uploaded_file) as pdf:
-        text = ""
-        for page in pdf.pages:
-            if page.extract_text():
-                text += page.extract_text() + "\n"
-    return text
+# ======= زر الانتقال للصفحة التالية =======
+st.markdown("""
+    <form action="/?page=diagnosis">
+        <button class="start-button" type="submit">ابدأ التشخيص</button>
+    </form>
+""", unsafe_allow_html=True)
 
-def extract_dtcs(text):
-    lines = text.split('\n')
-    dtcs = []
-    for line in lines:
-        match = re.search(r"(P\d{4})", line)
-        if match:
-            code = match.group(1)
-            desc = line.replace(code, "").strip(" :-–")
-            dtcs.append([code, desc.strip()])
-        elif line.strip():
-            dtcs.append(["No Code", line.strip()])
-    return dtcs
-
-def extract_sensor_data(text):
-    lines = text.split('\n')
-    sensors = []
-    for line in lines:
-        parts = line.strip().split()
-        if len(parts) >= 4:
-            name = ' '.join(parts[:-3])
-            value = parts[-3]
-            standard = parts[-2]
-            unit = parts[-1]
-            sensors.append([name, value, standard, unit])
-    return pd.DataFrame(sensors, columns=["Sensor", "Value", "Standard", "Unit"])
-
-# ======= واجهة رفع الملفات =======
-sensor_files = st.file_uploader("Upload One or More Sensor Reports (PDF)", type="pdf", accept_multiple_files=True)
-code_file = st.file_uploader("Upload Fault Report (PDF)", type="pdf")
-
-if sensor_files and code_file:
-    sensor_text = ""
-    for file in sensor_files:
-        sensor_text += extract_text_from_pdf(file)
-
-    code_text = extract_text_from_pdf(code_file)
-
-    df_sensors = extract_sensor_data(sensor_text)
-    dtcs = extract_dtcs(code_text)
-    df_dtcs = pd.DataFrame(dtcs, columns=["Code", "Description"])
-
-    st.subheader("1. Extracted Sensor Data")
-    st.dataframe(df_sensors)
-
-    st.subheader("2. Extracted Fault Codes")
-    st.dataframe(df_dtcs)
-
-    st.subheader("3. Sensor-Fault Matching & Deviation Analysis")
-    matches = []
-    for _, dtc_row in df_dtcs.iterrows():
-        for _, sensor_row in df_sensors.iterrows():
-            if sensor_row["Sensor"].lower() in dtc_row["Description"].lower():
-                try:
-                    value = float(sensor_row["Value"])
-                    standard = float(sensor_row["Standard"])
-                    deviation_percent = abs(value - standard) / standard * 100 if standard != 0 else 0
-                    status = "High Deviation" if deviation_percent > 15 else "OK"
-                except:
-                    deviation_percent = "N/A"
-                    status = "Cannot Evaluate"
-
-                matches.append([
-                    dtc_row["Code"],
-                    dtc_row["Description"],
-                    sensor_row["Sensor"],
-                    sensor_row["Value"],
-                    sensor_row["Standard"],
-                    sensor_row["Unit"],
-                    f"{deviation_percent:.1f}%" if isinstance(deviation_percent, float) else deviation_percent,
-                    status
-                ])
-
-    if matches:
-        df_matches = pd.DataFrame(matches, columns=[
-            "Code", "Fault Description", "Sensor", "Value", "Standard", "Unit", "Deviation %", "Status"
-        ])
-        st.success("Sensor deviation analysis completed:")
-        st.dataframe(df_matches)
-    else:
-        st.info("No direct match or deviation detected.")
-
-    # ======= زر يدوي لحفظ البيانات مع نسخة احتياطية =======
-    st.subheader("4. حفظ البيانات يدويًا")
-    if st.button("احفظ البيانات الحالية"):
-        try:
-            sensor_dict = {row['Sensor']: row['Value'] for _, row in df_sensors.iterrows()}
-            sensor_dict['Fault Codes'] = ','.join(df_dtcs['Code'].tolist())
-            new_case_df = pd.DataFrame([sensor_dict])
-
-            csv_filename = "Carset.csv"
-            backup_dir = "backup"
-            os.makedirs(backup_dir, exist_ok=True)
-
-            # إنشاء نسخة احتياطية باسم فيه التاريخ والساعة
-            if os.path.exists(csv_filename):
-                now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-                backup_path = os.path.join(backup_dir, f"backup_{now}.csv")
-                shutil.copyfile(csv_filename, backup_path)
-
-            # دمج البيانات الجديدة
-            if os.path.exists(csv_filename):
-                existing_df = pd.read_csv(csv_filename)
-                final_df = pd.concat([existing_df, new_case_df], ignore_index=True)
-            else:
-                final_df = new_case_df
-
-            final_df.to_csv(csv_filename, index=False)
-            st.success("تم حفظ البيانات في Carset.csv وتم إنشاء نسخة احتياطية داخل مجلد backup")
-
-            with open(csv_filename, "rb") as f:
-                st.download_button(
-                    label="Download Carset.csv",
-                    data=f,
-                    file_name="Carset.csv",
-                    mime="text/csv"
-                )
-
-        except Exception as e:
-            st.error(f"Error saving data: {e}")
-
-else:
-    st.warning("Please upload one or more sensor PDF reports and a fault code report to proceed.")
+# ======= توقيع Eng. Nabil =======
+st.markdown("""
+    <div class="footer">
+        Eng. Nabil Almasry<br>By AI
+    </div>
+""", unsafe_allow_html=True)
 
