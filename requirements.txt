@@ -1,4 +1,10 @@
-
-streamlit
-pdfplumber
+matplotlib
+seaborn
+joblib
 pandas
+numpy
+streamlit
+
+
+pdfplumber
+
