@@ -89,3 +89,4 @@ if st.button("🚀 تحليل البيانات وتوقع العطل"):
         except Exception as e:
             st.error("❌ حدث خطأ أثناء التحليل:")
             st.exception(e)
+#finidh
